@@ -1,0 +1,26 @@
+.grid {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  background-color: #222222;
+}
+
+.heading {
+  display: flex;
+  justify-content: center;
+}
+
+.main {
+  max-height: 400px;
+  max-width: 600px;
+  justify-content: center;
+}
+
+.card_form {
+  padding: 40px 20px;
+}
+
+.marginleft {
+  margin-left: 10px !important;
+}

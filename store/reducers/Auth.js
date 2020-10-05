@@ -1,5 +1,4 @@
 import * as ActionTypes from "../action-types/auth";
-import { HYDRATE } from "next-redux-wrapper";
 
 const initialState = {
   isAuthenticated: false,

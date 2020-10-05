@@ -6,6 +6,12 @@
   background-color: #222222;
 }
 
+.profile {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .heading {
   display: flex;
   justify-content: center;
@@ -23,4 +29,11 @@
 
 .marginleft {
   margin-left: 10px !important;
+}
+
+.tablecontainer {
+  display: flex !important;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
 }

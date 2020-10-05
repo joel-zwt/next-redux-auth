@@ -5,6 +5,7 @@ const express = require("express");
 const next = require("next");
 const { Sequelize, DataTypes } = require("sequelize");
 const cookieParser = require("cookie-parser");
+const nameRoutes = require("./routes/name-routes");
 
 const port = 5000;
 const dev = true;
@@ -161,6 +162,8 @@ app
           .json({ message: "Internal server error" });
       }
     });
+
+    server.use("/names", nameRoutes);
 
     // Default catch-all handler to allow Next.js to handle all other routes
     server.all("*", (req, res) => handle(req, res));

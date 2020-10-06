@@ -2,6 +2,10 @@ import * as ActionTypes from "../action-types/names";
 
 const initialState = {
   names: null,
+  page: 1,
+  rowsPerPage: 5,
+  totalEntries: 5,
+  totalPages: 1,
 };
 
 const NamesReducer = (state = initialState, { type, payload = null }) => {
@@ -14,6 +18,8 @@ const NamesReducer = (state = initialState, { type, payload = null }) => {
       return namesEdit(state, payload);
     case ActionTypes.NAMES_DELETE:
       return namesDelete(state, payload);
+    case ActionTypes.GET_PAGINATION_DETAILS:
+      return getPaginationDetails(state, payload);
     default:
       return state;
   }
@@ -23,6 +29,7 @@ const namesGetAll = (state, payload) => {
   state = {
     // ...state,
     // names: state.names.concat(payload),
+    ...state,
     names: payload,
   };
   return state;
@@ -37,7 +44,6 @@ const namesAdd = (state, payload) => {
 };
 
 const namesEdit = (state, payload) => {
-  console.log(payload);
   state = {
     ...state,
     names: state.names.map((name) =>
@@ -51,7 +57,6 @@ const namesEdit = (state, payload) => {
         : name
     ),
   };
-  console.log(state);
   return state;
 };
 
@@ -59,6 +64,17 @@ const namesDelete = (state, payload) => {
   state = {
     ...state,
     names: state.names.filter((name) => name.id !== payload.id),
+  };
+  return state;
+};
+
+const getPaginationDetails = (state, payload) => {
+  state = {
+    ...state,
+    page: payload.page,
+    rowsPerPage: payload.rowsPerPage,
+    totalEntries: payload.rows,
+    totalPages: payload.pages,
   };
   return state;
 };

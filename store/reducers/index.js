@@ -2,6 +2,7 @@ import { combineReducers } from "redux";
 
 import UserAuthenticate from "./Auth";
 import NamesReducer from "./Names";
+import ProfileReducer from "./Profile";
 
 // const appReducer = combineReducers({
 //   user: UserAuthenticate,
@@ -14,6 +15,7 @@ import NamesReducer from "./Names";
 const rootReducer = combineReducers({
   user: UserAuthenticate,
   data: NamesReducer,
+  profile: ProfileReducer,
 });
 
 // const rootReducer = (state, action) => {

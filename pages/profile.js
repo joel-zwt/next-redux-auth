@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import * as AuthService from "../store/services/authService";
 import * as NameService from "../store/services/nameService";
+import * as actions from "../store/actions/profile";
 import {
   Button,
   Card,
   Container,
   Dimmer,
+  Dropdown,
   Form,
   Header,
   Icon,
@@ -25,56 +27,126 @@ import {
 import styles from "../styles/index.module.css";
 
 const mapStateToProps = (state) => {
-  return { user: state.user, names: state.data.names };
+  return {
+    addModalOpen: state.profile.addModalOpen,
+    authModalOpen: state.profile.authModalOpen,
+    editModalOpen: state.profile.editModalOpen,
+    names: state.data.names,
+    page: state.data.page,
+    rowsPerPage: state.data.rowsPerPage,
+    secondModalOpen: state.profile.secondModalOpen,
+    totalEntries: state.data.totalEntries,
+    totalPages: state.data.totalPages,
+    user: state.user,
+  };
 };
 
-const Profile = ({ dispatch, user, names }) => {
+const Profile = ({
+  addModalOpen,
+  authModalOpen,
+  dispatch,
+  editModalOpen,
+  names,
+  page,
+  rowsPerPage,
+  secondModalOpen,
+  totalEntries,
+  totalPages,
+  user,
+}) => {
+  const fixed = false;
+  const options = [
+    { key: 1, text: "5", value: 5 },
+    { key: 2, text: "10", value: 10 },
+    { key: 3, text: "15", value: 15 },
+  ];
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formState, setFormState] = useState({});
-  const [error, setError] = useState();
-  const [secondOpen, setSecondOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const [addNameError, setaddNameError] = useState(null);
   const [editName, setEditName] = useState({});
+  const [error, setError] = useState();
+  const [formState, setFormState] = useState({});
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        await dispatch(actions.resetAllModals());
         // if state is deleted from store then logout
         if (!user.token) {
           await dispatch(AuthService.logout());
           router.push("/sign-in");
         } else {
           await dispatch(AuthService.authCheck());
-          await dispatch(NameService.getNames());
-          console.log("auth check: success");
+          await dispatch(NameService.getNames(page, rowsPerPage));
+          // console.log("auth check: success");
         }
       } catch (err) {
         setError(err.error);
-        setIsModalOpen(true);
+        await dispatch(actions.authModalOpen());
       }
     };
     checkAuth();
+
+    // close all modals on page unmount
+    return () => {
+      dispatch(actions.resetAllModals());
+    };
   }, []);
 
-  const fixed = false;
-
-  const handleChange = (event) => {
+  const handleAddChange = (event) => {
     setFormState({ ...formState, [event.target.name]: event.target.value });
+  };
+
+  const handleAddClose = async () => {
+    await dispatch(actions.addModalClose());
+    setFormState({});
+  };
+
+  const handleAddOpen = async () => {
+    await dispatch(actions.addModalOpen());
+  };
+
+  const handleAddSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      await dispatch(NameService.addName(formState));
+      await dispatch(NameService.getNames(page, rowsPerPage));
+    } catch (err) {
+      setaddNameError(err.error);
+    } finally {
+      await dispatch(actions.addModalClose());
+      await dispatch(actions.secondModalOpen());
+      setFormState({});
+    }
+  };
+
+  const handleAuthClose = () => {
+    router.push("/sign-in");
+  };
+
+  const handleDelete = async (key) => {
+    await dispatch(NameService.deleteName(key));
+    await dispatch(NameService.getNames(page, rowsPerPage));
+  };
+
+  const handleEdit = async (key) => {
+    setEditName(...names.filter((name) => name.id == key));
+    await dispatch(actions.editModalOpen());
   };
 
   const handleEditChange = (event) => {
     setEditName({ ...editName, [event.target.name]: event.target.value });
   };
 
-  const handleClose = () => {
-    setFormState({});
-    setOpen(false);
+  const handleEditClose = async () => {
+    await dispatch(actions.editModalClose());
   };
 
-  const handleSignIn = () => {
-    router.push("/sign-in");
+  const handleEditSubmit = async (event) => {
+    event.preventDefault();
+    await dispatch(NameService.editName(editName));
+    await dispatch(NameService.getNames(page, rowsPerPage));
+    await dispatch(actions.editModalClose());
   };
 
   const handleLogout = async () => {
@@ -86,28 +158,21 @@ const Profile = ({ dispatch, user, names }) => {
     }
   };
 
-  const handleCloseModal = () => {
+  const handlePageChange = async (event, { activePage }) => {
+    await dispatch(NameService.getNames(activePage, rowsPerPage));
+  };
+
+  const handleRowsPerPageChange = async (event, { value }) => {
+    console.log(value);
+    await dispatch(NameService.getNames(1, value));
+  };
+
+  const handleSecondClose = async () => {
+    await dispatch(actions.secondModalClose());
+  };
+
+  const handleSignIn = () => {
     router.push("/sign-in");
-  };
-
-  const handleEdit = (key) => {
-    console.log(key);
-    setEditName(...names.filter((name) => name.id == key));
-    setEditModalOpen(true);
-  };
-
-  const handleEditSubmit = async (event) => {
-    event.preventDefault();
-    await dispatch(NameService.editName(editName));
-    setEditModalOpen(false);
-  };
-
-  const handleDelete = (key) => {
-    console.log(key);
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
   };
 
   return (
@@ -187,11 +252,15 @@ const Profile = ({ dispatch, user, names }) => {
                   </Table.Row>
                 </Table.Header>
                 {names.length === 0 ? (
-                  <Table.Body>
-                    <Table.HeaderCell colSpan="4">
-                      Now rows to display
-                    </Table.HeaderCell>
-                  </Table.Body>
+                  <>
+                    <Table.Body>
+                      <Table.Row>
+                        <Table.Cell colSpan="4" textAlign="center">
+                          No rows to display
+                        </Table.Cell>
+                      </Table.Row>
+                    </Table.Body>
+                  </>
                 ) : (
                   <>
                     <Table.Body>
@@ -222,17 +291,24 @@ const Profile = ({ dispatch, user, names }) => {
                       <Table.Row>
                         <Table.HeaderCell colSpan="4">
                           <Pagination
-                            defaultActivePage={1}
+                            activePage={page}
                             firstItem={null}
                             lastItem={null}
                             pointing
                             secondary
                             inverted={true}
-                            totalPages={10}
+                            totalPages={totalPages}
+                            onPageChange={handlePageChange}
                           />
-
+                          <Dropdown
+                            text="Rows per page"
+                            options={options}
+                            closeOnChange
+                            value={rowsPerPage}
+                            onChange={handleRowsPerPageChange}
+                          />
                           <Modal
-                            open={open}
+                            open={addModalOpen}
                             trigger={
                               <Button
                                 floated="right"
@@ -244,19 +320,19 @@ const Profile = ({ dispatch, user, names }) => {
                                 <Icon name="user" /> Add Name
                               </Button>
                             }
-                            onClose={handleClose}
-                            onOpen={() => setOpen(true)}
+                            onClose={handleAddClose}
+                            onOpen={handleAddOpen}
                           >
                             <Header icon="user" content="Add new name" />
                             <Modal.Content>
-                              <Form onSubmit={handleSubmit}>
+                              <Form onSubmit={handleAddSubmit}>
                                 <Form.Field>
                                   <Label basic={true}>First Name</Label>
                                   <Input
                                     name="firstName"
                                     placeholder="Enter first name"
                                     value={formState.firstName || ""}
-                                    onChange={handleChange}
+                                    onChange={handleAddChange}
                                   />
                                 </Form.Field>
                                 <Form.Field>
@@ -265,7 +341,7 @@ const Profile = ({ dispatch, user, names }) => {
                                     name="middleName"
                                     placeholder="Enter middle name"
                                     value={formState.middleName || ""}
-                                    onChange={handleChange}
+                                    onChange={handleAddChange}
                                   />
                                 </Form.Field>
                                 <Form.Field>
@@ -274,19 +350,16 @@ const Profile = ({ dispatch, user, names }) => {
                                     name="lastName"
                                     placeholder="Enter last name"
                                     value={formState.lastName || ""}
-                                    onChange={handleChange}
+                                    onChange={handleAddChange}
                                   />
                                 </Form.Field>
                               </Form>
                             </Modal.Content>
                             <Modal.Actions>
-                              <Button color="red" onClick={handleClose}>
+                              <Button color="red" onClick={handleAddClose}>
                                 <Icon name="remove" /> Cancel
                               </Button>
-                              <Button
-                                color="green"
-                                onClick={() => setSecondOpen(true)}
-                              >
+                              <Button color="green" onClick={handleAddSubmit}>
                                 <Icon name="checkmark" /> Confirm
                               </Button>
                             </Modal.Actions>
@@ -301,23 +374,23 @@ const Profile = ({ dispatch, user, names }) => {
           </Container>
 
           <Modal
-            onClose={() => setSecondOpen(false)}
-            open={secondOpen}
+            onClose={handleSecondClose}
+            open={secondModalOpen}
             size="small"
           >
             <Modal.Content>
-              <p>That's everything!</p>
+              {addNameError == null ? (
+                <p>New name added successfully</p>
+              ) : (
+                <p>{addNameError}</p>
+              )}
             </Modal.Content>
             <Modal.Actions>
-              <Button
-                icon="check"
-                content="All Done"
-                onClick={() => setSecondOpen(false)}
-              />
+              <Button icon="check" content="Okay" onClick={handleSecondClose} />
             </Modal.Actions>
           </Modal>
 
-          <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)}>
+          <Modal open={editModalOpen} onClose={handleEditClose}>
             <Header icon="user" content="Edit name" />
             <Modal.Content>
               <Form onSubmit={handleEditSubmit} id="editform">
@@ -351,7 +424,7 @@ const Profile = ({ dispatch, user, names }) => {
               </Form>
             </Modal.Content>
             <Modal.Actions>
-              <Button color="red" onClick={handleClose}>
+              <Button color="red" onClick={handleEditClose}>
                 <Icon name="remove" /> Cancel
               </Button>
               <Button type="submit" form="editform" color="green">
@@ -360,13 +433,13 @@ const Profile = ({ dispatch, user, names }) => {
             </Modal.Actions>
           </Modal>
 
-          <Modal size="mini" open={isModalOpen}>
+          <Modal size="mini" open={authModalOpen}>
             <Modal.Header></Modal.Header>
             <Modal.Content>
               <p>{error}. Please sign-in again.</p>
             </Modal.Content>
             <Modal.Actions>
-              <Button color="orange" onClick={handleCloseModal}>
+              <Button color="orange" onClick={handleAuthClose}>
                 Okay
               </Button>
             </Modal.Actions>

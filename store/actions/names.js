@@ -27,3 +27,10 @@ export const namesDelete = (payload) => {
     payload,
   };
 };
+
+export const getPaginationDetails = (payload) => {
+  return {
+    type: ActionTypes.GET_PAGINATION_DETAILS,
+    payload,
+  };
+};

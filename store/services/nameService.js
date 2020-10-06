@@ -1,15 +1,24 @@
 import axios from "axios";
 import * as actions from "../actions/names";
 
-export const getNames = () => {
+export const getNames = (page, rowsPerPage) => {
   return (dispatch) => {
     return new Promise(async (resolve, reject) => {
       try {
         let response = await axios({
-          method: "get",
+          method: "post",
           url: "/names",
+          data: { page, rowsPerPage },
         });
-        await dispatch(actions.namesGetAll(response.data));
+        await dispatch(actions.namesGetAll(response.data.names));
+        await dispatch(
+          actions.getPaginationDetails({
+            page: response.data.page,
+            rowsPerPage: rowsPerPage,
+            rows: response.data.rows,
+            pages: response.data.pages,
+          })
+        );
         return resolve();
       } catch (err) {
         let code = err.response.status;
@@ -80,7 +89,7 @@ export const deleteName = (id) => {
           method: "post",
           url: `/names/delete/${id}`,
         });
-        await dispatch(actions.namesDelete(id));
+        await dispatch(actions.namesDelete({ id }));
         return resolve();
       } catch (err) {
         let code = err.response.status;

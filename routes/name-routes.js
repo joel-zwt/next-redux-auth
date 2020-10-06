@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const nid = require("nanoid");
 const { Sequelize, DataTypes } = require("sequelize");
 
 const sequelize = new Sequelize("next-dash", "root", "", {
@@ -25,8 +26,26 @@ const Names = sequelize.define("Name", {
   },
 });
 
-router.get("/", async (req, res) => {
+router.post("/", async (req, res) => {
   try {
+    let { page, rowsPerPage } = req.body;
+    let totalEntries = await Names.count();
+    if (totalEntries % rowsPerPage == 0) {
+      totalPages = parseInt(totalEntries / rowsPerPage);
+    } else {
+      totalPages = parseInt(totalEntries / rowsPerPage) + 1;
+    }
+    if (page > totalPages) {
+      page = totalPages;
+    }
+    if (totalEntries == 0) {
+      return res.status(200).json({
+        names: [],
+        page: 1,
+        pages: rowsPerPage,
+        rows: rowsPerPage,
+      });
+    }
     const names = await Names.findAll({
       attributes: [
         "id",
@@ -34,8 +53,15 @@ router.get("/", async (req, res) => {
         ["middle_name", "middleName"],
         ["last_name", "lastName"],
       ],
+      limit: rowsPerPage,
+      offset: (page - 1) * rowsPerPage,
     });
-    return res.status(200).json(names);
+    return res.status(200).json({
+      names: names,
+      page: page,
+      pages: totalPages,
+      rows: totalEntries,
+    });
   } catch (err) {
     console.log(err.stack);
     return res
@@ -47,13 +73,15 @@ router.get("/", async (req, res) => {
 router.post("/add", async (req, res) => {
   try {
     let { firstName, middleName, lastName } = req.body;
+    let id = nid.nanoid(10);
     let name = await Names.create({
+      id: id,
       first_name: firstName,
       middle_name: middleName,
       last_name: lastName,
     });
     console.log(name.dataValues);
-    return res.status(200).json({ firstName, middleName, lastName });
+    return res.status(200).json({ id, firstName, middleName, lastName });
   } catch (err) {
     console.log(err.stack);
     return res
